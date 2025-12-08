@@ -1,0 +1,10 @@
+transformers>=4.36.0
+datasets>=2.16.0
+torchaudio
+torch
+accelerate>=0.26.0
+librosa
+scikit-learn
+evaluate
+soundfile
+PyYAML

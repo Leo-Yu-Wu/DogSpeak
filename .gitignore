@@ -1,0 +1,39 @@
+# --- Datasets ---
+# Ignore the raw audio files
+DogSpeak_Dataset/
+data/
+
+# --- Model Checkpoints ---
+# Ignore heavy weight files (keep structure, but ignore files)
+checkpoints/
+checkpoints_breed/
+checkpoints_gender/
+*.pth
+*.pt
+*.ckpt
+*.bin
+*.h5
+
+# --- Logs & Results ---
+# Ignore training logs and generated plots
+*.csv
+*.png
+*.jpg
+evaluation_report.txt
+runs/
+logs/
+
+# --- Python & Environment ---
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv/
+.conda/
+
+# --- IDE & System ---
+.vscode/
+.idea/
+.DS_Store

@@ -1,0 +1,27 @@
+project:
+  name: "DogSpeak_Gender"
+  seed: 42
+  save_dir: "checkpoints_gender"
+
+data:
+  root_dir: "D:/dog-identification/DogSpeak_Dataset"
+  metadata_file: "D:/dog-identification/DogSpeak_Dataset/metadata_cleaned.csv"
+  target_sample_rate: 16000
+  # Same max duration as before
+  max_duration_sec: 4.5
+  min_samples_per_dog: 10
+  num_workers: 4
+  # TARGET COLUMN: Change this to 'sex'
+  target_col: "sex"
+
+model:
+  id: "facebook/w2v-bert-2.0"
+  freeze_encoder: true
+
+training:
+  device: "cuda"
+  epochs: 10
+  batch_size: 8
+  accumulation_steps: 4
+  learning_rate: 5.0e-5
+  use_mixed_precision: true

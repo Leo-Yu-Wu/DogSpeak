@@ -1,0 +1,25 @@
+project:
+  name: "DogSpeak_ID_W2V_BERT"
+  seed: 42
+  save_dir: "checkpoints"
+
+data:
+  root_dir: "D:/dog-identification/DogSpeak_Dataset"
+  metadata_file: "D:/dog-identification/DogSpeak_Dataset/metadata_cleaned.csv"
+  target_sample_rate: 16000
+  max_duration_sec: 4.5
+  min_samples_per_dog: 30
+  num_workers: 4
+  target_col: "dog_id"
+
+model:
+  id: "facebook/w2v-bert-2.0"
+  freeze_encoder: true
+
+training:
+  device: "cuda"
+  epochs: 15
+  batch_size: 8
+  accumulation_steps: 4
+  learning_rate: 5.0e-5
+  use_mixed_precision: true
