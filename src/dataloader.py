@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split, GroupShuffleSplit
 from torch.utils.data import Dataset, DataLoader
 import torchaudio
 import torch
+import numpy as np
 import random
 from transformers import AutoFeatureExtractor
 
@@ -14,9 +15,8 @@ class DogTaskDataset(Dataset):
         self.label_mapping = label_mapping
         self.processor = processor
         self.target_sample_rate = target_sample_rate
-        self.target_col = target_col  # 'sex' or 'breed'
+        self.target_col = target_col
 
-        # Calculate Max Frames
         self.target_samples = int(max_duration_sec * target_sample_rate)
         self.max_frames = int(self.target_samples / 160) + 10
 
@@ -36,10 +36,8 @@ class DogTaskDataset(Dataset):
         try:
             row = self.data.iloc[idx]
             file_path = row['file_path']
-            # DYNAMIC LABEL SELECTION
             label_str = row[self.target_col]
 
-            # Load & Process (Same as before)
             waveform, sample_rate = torchaudio.load(file_path)
             if sample_rate != self.target_sample_rate:
                 resampler = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=self.target_sample_rate)
@@ -79,43 +77,45 @@ def get_dataloaders(cfg):
     df['file_path'] = df['filename'].map(file_map)
     df = df.dropna(subset=['file_path'])
 
-    # Filter
     min_samples = cfg['data']['min_samples_per_dog']
     counts = df['dog_id'].value_counts()
     valid_dogs = counts[counts >= min_samples].index
     df = df[df['dog_id'].isin(valid_dogs)]
 
-    # 1. SPLIT STRATEGY: GROUPED SPLIT
-    print("Performing GROUPED split...")
+    target_col = cfg['data']['target_col']
 
-    splitter_test = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=cfg['project']['seed'])
-    train_idx, test_idx = next(splitter_test.split(df, groups=df['dog_id']))
+    # --- SMART SPLIT LOGIC ---
+    if target_col == "dog_id":
+        print("Task is 'dog_id': Using STRATIFIED Split (Splitting clips, keeping dogs in both sets)")
+        # Stratified Split ensures EVERY dog is in Train, Val, and Test
+        train_df, temp_df = train_test_split(df, test_size=0.2, stratify=df['dog_id'],
+                                             random_state=cfg['project']['seed'])
+        val_df, test_df = train_test_split(temp_df, test_size=0.5, stratify=temp_df['dog_id'],
+                                           random_state=cfg['project']['seed'])
+    else:
+        print(f"Task is '{target_col}': Using GROUPED Split (Splitting dogs to prevent leakage)")
+        # Grouped Split ensures dogs in Test have NEVER been seen in Train
+        splitter_test = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=cfg['project']['seed'])
+        train_idx, test_idx = next(splitter_test.split(df, groups=df['dog_id']))
+        train_df = df.iloc[train_idx]
+        test_df = df.iloc[test_idx]
 
-    train_df = df.iloc[train_idx]
-    test_df = df.iloc[test_idx]
-
-    # Further split Train into Train/Val
-    splitter_val = GroupShuffleSplit(n_splits=1, test_size=0.1, random_state=cfg['project']['seed'])
-    train_sub_idx, val_sub_idx = next(splitter_val.split(train_df, groups=train_df['dog_id']))
-
-    val_df = train_df.iloc[val_sub_idx]
-    train_df = train_df.iloc[train_sub_idx]
+        splitter_val = GroupShuffleSplit(n_splits=1, test_size=0.1, random_state=cfg['project']['seed'])
+        train_sub_idx, val_sub_idx = next(splitter_val.split(train_df, groups=train_df['dog_id']))
+        val_df = train_df.iloc[val_sub_idx]
+        train_df = train_df.iloc[train_sub_idx]
 
     print(f"Split Results: Train: {len(train_df)} | Val: {len(val_df)} | Test: {len(test_df)}")
 
-    # 2. Setup Labels based on Target Column
-    target_col = cfg['data']['target_col']
     unique_labels = sorted(df[target_col].unique())
     label_map = {label: i for i, label in enumerate(unique_labels)}
-    print(f"Task: {target_col} Classification | Classes: {unique_labels}")
+    print(f"Task: {target_col} Classification | Classes: {len(unique_labels)}")
 
     model_id = cfg['model']['id']
     processor = AutoFeatureExtractor.from_pretrained(model_id)
-
     sr = cfg['data']['target_sample_rate']
     dur = cfg['data']['max_duration_sec']
 
-    # Create Datasets
     train_ds = DogTaskDataset(train_df, label_map, processor, sr, dur, target_col)
     val_ds = DogTaskDataset(val_df, label_map, processor, sr, dur, target_col)
     test_ds = DogTaskDataset(test_df, label_map, processor, sr, dur, target_col)

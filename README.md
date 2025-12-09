@@ -44,27 +44,41 @@ The behavior of the model is controlled by YAML config files.
 You can train any task using the generic train_task.py script.
 *Train Breed Model:*  
 ```bash
-python train_task.py config_breed.yaml
+python src/train_task.py config_breed.yaml
 ```
 *Train Gender Model:*  
 ```bash
-python train_task.py config_gender.yaml
+python src/train_task.py config_gender.yaml
 ```
 *Train Dog ID Model:*  
 ```bash
-python train_task.py config.yaml
+python src/train_task.py config.yaml
+```
+*Finetune Existing Model:*  
+```bash
+python src/train_task.py config.yaml # (replace with config)
 ```
 ## Evaluation
 Generate detailed reports, calculate Macro F1-Score, and plot Confusion Matrices.  
 *Basic Evaluation*
 ```bash
-python evaluate.py config_breed.yaml
+python evaluate.py config_breed.yaml --model_type finetuned
 ```
-*Top-K Evaluation (For ID Task):* Since the ID task has 142+ classes, the confusion matrix can be messy. Use `--top_k` to plot only the most frequent dogs.
+*Top-K Evaluation (For ID Task):*   
+Since the ID task has 142+ classes, the confusion matrix can be messy. Use `--top_k` to plot only the most frequent dogs.
 ```bash
 # Plot confusion matrix for the top 20 most active dogs
-python src/evaluate.py config.yaml --top_k 20l
+python src/evaluate.py config.yaml --k 20
 ```
+```bash
+# Plot confusion matrix for the least 20 most active dogs
+python src/evaluate.py config.yaml --worst --k 20 
+```
+```bash
+# Plot confusion matrix for the top 20 dog ids
+python src/evaluate.py config.yaml --sequential --k 20
+```
+
 *Output:*
-    - `checkpoints/confusion_matrix.png` -> Visual heatmap of model performance.
+    - `checkpoints/confusion_matrix.png` -> Visual heatmap of model performance.  
     - `checkpoints/evaluation_report.txt` -> Detailed precision/recall for every class.

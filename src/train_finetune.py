@@ -9,8 +9,8 @@ import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
 import pandas as pd
 
-from src.dataloader import get_dataloaders
-from src.model import DogIdentifier
+from dataloader import get_dataloaders
+from model import DogIdentifier
 
 # --- HYPERPARAMETERS ---
 FT_CONFIG = {
@@ -29,7 +29,7 @@ def load_config(path):
 
 def train_finetune(config_path):
     # 1. Load Task-Specific Config
-    print(f"⚙️ Loading config: {config_path}")
+    print(f"Loading config: {config_path}")
     cfg = load_config(config_path)
 
     DEVICE = cfg['training']['device']
@@ -40,17 +40,17 @@ def train_finetune(config_path):
     os.makedirs(SAVE_DIR, exist_ok=True)
 
     # --- LOGGING SETUP ---
-    log_path = f"{SAVE_DIR}/training_log.csv"
+    log_path = f"{SAVE_DIR}/finetune_log.csv"
     history = []
-    print(f"🚀 Starting Fine-Tuning Task: {TASK_NAME}")
-    print(f"📄 Logs will be saved to: {log_path}")
+    print(f"Starting Fine-Tuning Task: {TASK_NAME}")
+    print(f"Logs will be saved to: {log_path}")
 
     # 2. Data (This automatically handles 'target_col' from config)
     train_loader, val_loader, _, num_classes, label_map = get_dataloaders(cfg)
-    print(f"✅ Detected {num_classes} classes for this task.")
+    print(f"Detected {num_classes} classes for this task.")
 
     # 3. Class Weights (Handle Imbalance)
-    print("⚖️ Calculating class weights...")
+    print("Calculating class weights...")
     # Extract labels from the dataset safely
     all_labels = []
     for _, row in train_loader.dataset.data.iterrows():
@@ -69,26 +69,43 @@ def train_finetune(config_path):
         freeze_encoder=False  # <--- UNFREEZE EVERYTHING
     ).to(DEVICE)
 
+    # --- MULTI-GPU SUPPORT ---
+    if torch.cuda.device_count() > 1:
+        print(f"Detected {torch.cuda.device_count()} GPUs! Enabling DataParallel.")
+        model = nn.DataParallel(model)
+    else:
+        print("Using Single GPU.")
+    # -------------------------
+
     # 5. SMART WEIGHT LOADING
     # We want the Encoder from Stage 1, but NOT the Classifier Head
-    stage1_weights_path = "D:/dog-identification/checkpoints/best_model_w2v.pth"
+    stage1_weights_path = "/checkpoints/best_model_w2v.pth"
 
     if os.path.exists(stage1_weights_path):
-        print(f"📥 Loading Stage 1 Body from: {stage1_weights_path}")
+        print(f"Loading Stage 1 Body from: {stage1_weights_path}")
         pretrained_dict = torch.load(stage1_weights_path, map_location=DEVICE)
-        model_dict = model.state_dict()
 
-        # Filter out classifier weights (Shape mismatch: 142 vs 2 or 100)
-        # We keep the 'projector' and 'wav2vec2' parts, discard 'classifier'
+        # Handle DataParallel wrapping
+        if isinstance(model, nn.DataParallel):
+            model_dict = model.module.state_dict()
+        else:
+            model_dict = model.state_dict()
+
+        # Filter out classifier weights
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if
                            k in model_dict and v.shape == model_dict[k].shape}
 
         # Overwrite only the matching parts
         model_dict.update(pretrained_dict)
-        model.load_state_dict(model_dict)
-        print(f"✅ Successfully loaded {len(pretrained_dict)}/{len(model_dict)} layers (Head reset for new task).")
+
+        if isinstance(model, nn.DataParallel):
+            model.module.load_state_dict(model_dict)
+        else:
+            model.load_state_dict(model_dict)
+
+        print(f"Successfully loaded {len(pretrained_dict)}/{len(model_dict)} layers (Head reset for new task).")
     else:
-        print("⚠️ Warning: Stage 1 weights not found. Starting from scratch (Transformers pre-trained).")
+        print("Warning: Stage 1 weights not found. Starting from scratch (Transformers pre-trained).")
 
     # 6. Optimizer & Loss
     optimizer = optim.AdamW(model.parameters(), lr=FT_CONFIG['learning_rate'], weight_decay=FT_CONFIG['weight_decay'])
@@ -169,7 +186,13 @@ def train_finetune(config_path):
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            torch.save(model.state_dict(), f"{SAVE_DIR}/best_model_finetuned.pth")
+
+            # Unwrap DataParallel before saving
+            if isinstance(model, nn.DataParallel):
+                torch.save(model.module.state_dict(), f"{SAVE_DIR}/best_model_finetuned.pth")
+            else:
+                torch.save(model.state_dict(), f"{SAVE_DIR}/best_model_finetuned.pth")
+
             print(">>> New Best Fine-Tuned Model Saved!")
 
 

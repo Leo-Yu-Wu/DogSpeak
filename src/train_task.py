@@ -7,8 +7,8 @@ import sys
 from tqdm import tqdm
 import pandas as pd
 
-from src.dataloader import get_dataloaders
-from src.model import DogIdentifier
+from dataloader import get_dataloaders
+from model import DogIdentifier
 
 
 def load_config(path):
@@ -39,6 +39,14 @@ def train(config_file):
         model_id=cfg['model']['id'],
         freeze_encoder=cfg['model']['freeze_encoder']
     ).to(DEVICE)
+
+    # --- MULTI-GPU SUPPORT ---
+    if torch.cuda.device_count() > 1:
+        print(f"Detected {torch.cuda.device_count()} GPUs! Enabling DataParallel.")
+        model = nn.DataParallel(model)
+    else:
+        print("Using Single GPU.")
+    # -------------------------
 
     optimizer = optim.AdamW(model.parameters(), lr=float(cfg['training']['learning_rate']))
     use_amp = cfg['training']['use_mixed_precision']
@@ -109,9 +117,16 @@ def train(config_file):
         })
         pd.DataFrame(history).to_csv(log_path, index=False)
 
+        # --- SAVE MODEL (Updated for Multi-GPU) ---
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            torch.save(model.state_dict(), f"{SAVE_DIR}/best_model.pth")
+
+            # Unwrap DataParallel before saving
+            if isinstance(model, nn.DataParallel):
+                torch.save(model.module.state_dict(), f"{SAVE_DIR}/best_model.pth")
+            else:
+                torch.save(model.state_dict(), f"{SAVE_DIR}/best_model.pth")
+
             print(">>> Saved Best Model")
 
 
