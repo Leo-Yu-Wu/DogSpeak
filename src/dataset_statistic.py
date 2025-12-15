@@ -28,13 +28,8 @@ def analyze():
     print(f"Reading {CSV_PATH}...")
     df = pd.read_csv(CSV_PATH)
 
-    # --- 1. TEXT REPORT ---
-    print("\n" + "=" * 40)
-    print("DATASET STATISTICS REPORT")
-    print("=" * 40)
     print(f"Total Audio Clips: {len(df)}")
     print(f"Total Unique Dogs: {df['dog_id'].nunique()}")
-    print("-" * 40)
 
     # Breed Stats
     print("BREED DISTRIBUTION (Clips vs Unique Dogs):")
@@ -56,11 +51,9 @@ def analyze():
     print(f"Max clips for a dog: {clips_per_dog.max()}")
     print(f"Mean clips per dog:  {clips_per_dog.mean():.2f}")
 
-    # --- 2. VISUALIZATION DASHBOARD ---
-    print("Generating Visualization Dashboard...")
+    # ---  VISUALIZATION DASHBOARD ---
     sns.set_theme(style="whitegrid")
 
-    # Create a figure with 2 rows and 2 columns
     fig, axes = plt.subplots(2, 2, figsize=(18, 12))
     fig.suptitle('DogSpeak Dataset Analysis', fontsize=20, weight='bold')
 
@@ -119,7 +112,6 @@ def analyze():
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.savefig(SAVE_IMG_PATH)
-    print(f"Dashboard saved to: {SAVE_IMG_PATH}")
     plt.show()
 
 
