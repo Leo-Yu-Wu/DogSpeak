@@ -19,9 +19,8 @@ class DogIdentifier(nn.Module):
             ignore_mismatched_sizes=True
         )
 
-        # --- FIX: Manually Freeze Layers ---
+        # --- Manually Freeze Layers ---
         if freeze_encoder:
-            print("Freezing feature encoder layers...")
             # We explicitly tell PyTorch not to update gradients for the feature projection
             # and the encoder layers, leaving only the classifier head trainable.
 
@@ -37,8 +36,6 @@ class DogIdentifier(nn.Module):
             for name, param in self.hf_model.named_parameters():
                 if "classifier" in name or "projector" in name or "intermediate_dense" in name:
                     param.requires_grad = True
-
-            print("Encoder frozen. Training only classification head.")
 
     def forward(self, input_features, attention_mask=None):
         outputs = self.hf_model(
