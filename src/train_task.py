@@ -42,10 +42,10 @@ def train(config_file):
 
     # --- MULTI-GPU SUPPORT ---
     if torch.cuda.device_count() > 1:
-        print(f"Detected {torch.cuda.device_count()} GPUs! Enabling DataParallel.")
+        print(f"Detected {torch.cuda.device_count()} GPUs! Enabling DataParallel")
         model = nn.DataParallel(model)
     else:
-        print("Using Single GPU.")
+        print("Using Single GPU")
     # -------------------------
 
     optimizer = optim.AdamW(model.parameters(), lr=float(cfg['training']['learning_rate']))
