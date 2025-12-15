@@ -14,9 +14,9 @@ from model import DogIdentifier
 
 # --- HYPERPARAMETERS ---
 FT_CONFIG = {
-    'learning_rate': 5e-6,  # Low LR to preserve encoder knowledge
+    'learning_rate': 5e-6,  
     'epochs': 10,
-    'batch_size': 4,  # Adjust based on your GPU VRAM
+    'batch_size': 4, 
     'accumulation_steps': 8,
     'weight_decay': 0.01
 }
@@ -50,8 +50,6 @@ def train_finetune(config_path):
     print(f"Detected {num_classes} classes for this task.")
 
     # 3. Class Weights (Handle Imbalance)
-    print("Calculating class weights...")
-    # Extract labels from the dataset safely
     all_labels = []
     for _, row in train_loader.dataset.data.iterrows():
         # Map the specific string label to its ID
@@ -66,7 +64,7 @@ def train_finetune(config_path):
     model = DogIdentifier(
         num_classes=num_classes,
         model_id=cfg['model']['id'],
-        freeze_encoder=False  # <--- UNFREEZE EVERYTHING
+        freeze_encoder=False 
     ).to(DEVICE)
 
     # --- MULTI-GPU SUPPORT ---
@@ -74,7 +72,6 @@ def train_finetune(config_path):
         print(f"Detected {torch.cuda.device_count()} GPUs! Enabling DataParallel.")
         model = nn.DataParallel(model)
     else:
-        print("Using Single GPU.")
     # -------------------------
 
     # 5. SMART WEIGHT LOADING
@@ -192,8 +189,6 @@ def train_finetune(config_path):
                 torch.save(model.module.state_dict(), f"{SAVE_DIR}/best_model_finetuned.pth")
             else:
                 torch.save(model.state_dict(), f"{SAVE_DIR}/best_model_finetuned.pth")
-
-            print(">>> New Best Fine-Tuned Model Saved!")
 
 
 if __name__ == "__main__":
