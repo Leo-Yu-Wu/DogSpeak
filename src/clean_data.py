@@ -61,16 +61,11 @@ def clean_dataset():
     df_final = df_clean.loc[valid_indices]
 
     # 4. Save
-    print("-" * 30)
     print(f"Original Clips: {original_len}")
     print(f"Cleaned Clips:  {len(df_final)}")
     print(f"Removed:        {original_len - len(df_final)} ({corrupt_count} were corrupt)")
-    print("-" * 30)
 
     df_final.to_csv(OUTPUT_CSV, index=False)
-    print(f"\n✅ Saved cleaned metadata to: {OUTPUT_CSV}")
-    print("Update your config.yaml to use this new file!")
-
 
 if __name__ == "__main__":
     clean_dataset()
