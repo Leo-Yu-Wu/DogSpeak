@@ -72,6 +72,7 @@ def train_finetune(config_path):
         print(f"Detected {torch.cuda.device_count()} GPUs! Enabling DataParallel.")
         model = nn.DataParallel(model)
     else:
+        print("Using Single GPU")
     # -------------------------
 
     # 5. SMART WEIGHT LOADING
