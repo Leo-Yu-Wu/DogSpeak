@@ -9,8 +9,6 @@ import os
 import argparse
 import re
 from collections import Counter
-
-# Import your modules
 from dataloader import get_dataloaders
 from model import DogIdentifier
 
@@ -121,7 +119,6 @@ def evaluate(config_path, show_worst=False, sequential=False, k=20, model_type="
     all_preds = []
     all_labels = []
 
-    print("Running Inference...")
     with torch.no_grad():
         for input_features, attention_mask, labels in tqdm(test_loader):
             input_features = input_features.to(DEVICE)
@@ -146,14 +143,11 @@ def evaluate(config_path, show_worst=False, sequential=False, k=20, model_type="
     macro_recall = np.mean(recall)
     macro_f1 = np.mean(f1)
 
-    print("\n" + "=" * 30)
     print(f"EVALUATION RESULTS: {TASK_NAME}")
-    print("=" * 30)
     print(f"Overall Accuracy:   {acc * 100:.2f}%")
     print(f"Macro Precision:    {macro_precision:.4f}")
     print(f"Macro Recall:       {macro_recall:.4f}")
     print(f"Macro F1-Score:     {macro_f1:.4f}")
-    print("=" * 30)
 
     # 7. Confusion Matrix Logic
     cm = confusion_matrix(all_labels, all_preds, labels=range(num_classes))
@@ -199,7 +193,6 @@ def evaluate(config_path, show_worst=False, sequential=False, k=20, model_type="
     cm_norm = np.nan_to_num(cm_norm)
 
     # 8. Plot
-    print("Generating Plot...")
     plt.figure(figsize=(12, 10))
 
     sns.heatmap(
@@ -225,23 +218,19 @@ def evaluate(config_path, show_worst=False, sequential=False, k=20, model_type="
 
     plot_path = f"{SAVE_DIR}/{plot_filename}"
     plt.savefig(plot_path)
-    print(f"Saved plot to: {plot_path}")
 
     # 9. Save Metrics to Text File
     report_path = f"{SAVE_DIR}/evaluation_report.txt"
     with open(report_path, "w") as f:
         f.write(f"Task: {TASK_NAME}\n")
         f.write(f"Weights: {weights_path}\n")
-        f.write("-" * 20 + "\n")
         f.write(f"Accuracy: {acc:.4f}\n")
         f.write(f"Macro Precision: {macro_precision:.4f}\n")
         f.write(f"Macro Recall: {macro_recall:.4f}\n")
         f.write(f"Macro F1: {macro_f1:.4f}\n")
-        f.write("-" * 20 + "\n\n")
         f.write("Per-Class Report:\n")
         f.write(classification_report(all_labels, all_preds, target_names=class_names, zero_division=0))
 
-    print(f"Detailed report saved to: {report_path}")
 
 
 if __name__ == "__main__":
